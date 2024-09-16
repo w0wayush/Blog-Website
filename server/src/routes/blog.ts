@@ -1,14 +1,32 @@
 import { PrismaClient } from "@prisma/client/extension";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
-import { sign } from "hono/jwt";
+import { sign, verify } from "hono/jwt";
 
 export const blogRouter = new Hono<{
   Bindings: {
     DATABASE_URL: string;
     JWT_SECRET: string;
   };
+  Variables: {
+    userId: string;
+  };
 }>();
+
+blogRouter.use("/*", async (c, next) => {
+  const authHeader = c.req.header("authorization") || "";
+  const user = await verify(authHeader, c.env.JWT_SECRET);
+
+  if (user && typeof user.id === "string") {
+    c.set("userId", user.id);
+    await next();
+  } else {
+    c.status(401);
+    return c.json({
+      message: "Your token is invalid",
+    });
+  }
+});
 
 blogRouter.get("/:id", async (c) => {
   const body = await c.req.json();
@@ -37,6 +55,8 @@ blogRouter.get("/:id", async (c) => {
 
 blogRouter.post("/", async (c) => {
   const body = await c.req.json();
+  const authorId = c.get("userId");
+
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
@@ -44,7 +64,7 @@ blogRouter.post("/", async (c) => {
   const blog = await prisma.blog.create({
     title: body.title,
     content: body.content,
-    authorId: body.id,
+    authorId: authorId,
   });
 
   return c.json({
