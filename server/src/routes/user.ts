@@ -12,6 +12,43 @@ export const userRouter = new Hono<{
   };
 }>();
 
+userRouter.post("/signin", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env?.DATABASE_URL,
+  }).$extends(withAccelerate());
+
+  console.log("Inside signin");
+
+  try {
+    const body = await c.req.json();
+    const { success } = signinInput.safeParse(body);
+    if (!success) {
+      c.status(411);
+      return c.json({ message: "Inputs not correct" });
+    }
+
+    console.log("After zod validation");
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email: body.email,
+        password: body.password,
+      },
+    });
+
+    if (!user) {
+      c.status(403);
+      return c.json({ error: "user not found" });
+    }
+
+    const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
+    return c.json({ jwt });
+  } catch (error) {
+    c.status(403);
+    return c.json({ error: "error while signing in" });
+  }
+});
+
 userRouter.post("/signup", async (c) => {
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
@@ -39,31 +76,4 @@ userRouter.post("/signup", async (c) => {
     c.status(403);
     return c.json({ error: "error while signing up" });
   }
-});
-
-userRouter.post("/signin", async (c) => {
-  const prisma = new PrismaClient({
-    datasourceUrl: c.env?.DATABASE_URL,
-  }).$extends(withAccelerate());
-
-  const body = await c.req.json();
-  const { success } = signinInput.safeParse(body);
-  if (!success) {
-    c.status(411);
-    return c.json({ message: "Inputs not correct" });
-  }
-  const user = await prisma.user.findUnique({
-    where: {
-      email: body.email,
-      password: body.password,
-    },
-  });
-
-  if (!user) {
-    c.status(403);
-    return c.json({ error: "user not found" });
-  }
-
-  const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
-  return c.json({ jwt });
 });
