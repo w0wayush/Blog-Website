@@ -11,6 +11,7 @@ export const blogRouter = new Hono<{
   };
   Variables: {
     userId: string;
+    // userName: string;
   };
 }>();
 
@@ -28,6 +29,16 @@ blogRouter.use("/*", async (c, next) => {
         message: "Your token is invalid",
       });
     }
+
+    // if (user && typeof user.name === "string") {
+    //   c.set("userName", user.name);
+    //   await next();
+    // } else {
+    //   c.status(401);
+    //   return c.json({
+    //     message: "Your token is invalid",
+    //   });
+    // }
   } catch (error) {
     c.status(403);
     return c.json({
@@ -41,7 +52,18 @@ blogRouter.get("/bulk", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
 
-  const blogs = await prisma.blog.findMany();
+  const blogs = await prisma.blog.findMany({
+    select: {
+      content: true,
+      title: true,
+      id: true,
+      author: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
 
   return c.json({
     blogs,
@@ -61,6 +83,16 @@ blogRouter.get("/:id", async (c) => {
       where: {
         id: id,
         // id: body.id,
+      },
+      select: {
+        content: true,
+        title: true,
+        id: true,
+        author: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -108,7 +140,7 @@ blogRouter.put("/", async (c) => {
 
   // const id = c.req.param("id");
   const body = await c.req.json();
-  
+
   const { success, error } = updateBlogInput.safeParse(body);
   if (!success) {
     c.status(411);

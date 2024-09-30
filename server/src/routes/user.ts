@@ -17,8 +17,6 @@ userRouter.post("/signin", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
 
-  console.log("Inside signin");
-
   try {
     const body = await c.req.json();
     const { success } = signinInput.safeParse(body);
@@ -26,8 +24,6 @@ userRouter.post("/signin", async (c) => {
       c.status(411);
       return c.json({ message: "Inputs not correct" });
     }
-
-    console.log("After zod validation");
 
     const user = await prisma.user.findUnique({
       where: {
@@ -70,7 +66,7 @@ userRouter.post("/signup", async (c) => {
       },
     });
 
-    const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
+    const jwt = await sign({ id: user.id, name: user.name }, c.env.JWT_SECRET);
     return c.json({ jwt });
   } catch (e) {
     c.status(403);
