@@ -1,0 +1,27 @@
+# Node.js dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Logs
+logs
+*.log
+
+# Build directories
+dist
+build
+
+# Local environment files
+.env
+.env.local
+
+# Miscellaneous
+.DS_Store
+.git
+.vscode
+.idea
+*.swp
